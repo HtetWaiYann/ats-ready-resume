@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #e6e7ea;
+  font-family: var(--font-ui);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Mono eyebrow / label / meta */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9a9ba3;
+}
+
+/* Editing-rail section panels */
+.sec-panel {
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.sec-panel:hover {
+  border-color: #dcdde2;
+  box-shadow: 0 4px 14px rgba(20, 20, 35, 0.06);
+}
+
+/* Quiet scrollbar for the editing rail */
+.rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d3d4da transparent;
+}
+.rail-scroll::-webkit-scrollbar {
+  width: 11px;
+}
+.rail-scroll::-webkit-scrollbar-thumb {
+  background: #d3d4da;
+  border: 3px solid #f6f6f7;
+  border-radius: 8px;
+}
+.rail-scroll::-webkit-scrollbar-thumb:hover {
+  background: #c2c3cb;
 }
