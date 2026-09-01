@@ -8,7 +8,7 @@ import {
   ExportOutlined,
   ImportOutlined,
   DownOutlined,
-  AppstoreOutlined,
+  TrademarkCircleFilled,
   DownloadOutlined,
 } from "@ant-design/icons";
 import type { SectionType, ResumeData } from "@/types/resume";
@@ -68,7 +68,7 @@ export default function Toolbar({ onOpenDesign }: { onOpenDesign: () => void }) 
       {/* Brand */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         <span style={{ display: "grid", placeItems: "center", width: 32, height: 32, borderRadius: 9, background: "#17181c", color: "#fff", flexShrink: 0 }}>
-          <AppstoreOutlined style={{ fontSize: 15 }} />
+          <TrademarkCircleFilled style={{ fontSize: 15 }} />
         </span>
         <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: -0.3, color: "#17181c" }}>My Resume</span>
         {statusText && (

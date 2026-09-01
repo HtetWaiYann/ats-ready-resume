@@ -4,8 +4,16 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "My Resume Builder",
-  description: "Personal local-only resume editor",
+  title: "ATS-Ready Resume",
+  applicationName: "ATS-Ready Resume",
+  authors: [{name: "Htet Wai Yan", url:"https://www.htetwaiyan.com"}],
+  description: "ATS friendly lightweight local-only resume editor",
+  keywords:["ATS", "Resume", "ATS-Ready", "ATS Friendly", "Resume Builder", "Free Resume Builder"],
+  icons: {
+    icon: "/favicon-32x32.png",
+    apple: "/apple-touch-icon.png"
+  },
+  manifest: "/site.webmanifest"
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
