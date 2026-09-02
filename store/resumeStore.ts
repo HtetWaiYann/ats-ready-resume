@@ -20,9 +20,14 @@ interface ResumeStore {
   loaded: boolean;
   saveStatus: SaveStatus;
   previewPages: number; // last page count from PaperPreview (for the ATS check)
+  past: ResumeData[]; // undo stack (session only)
+  future: ResumeData[]; // redo stack (session only)
+  flash: { id: string; n: number } | null; // section touched by the last undo/redo, for the preview to spotlight
   load: () => Promise<void>;
   setTheme: (theme: ResumeTheme) => void;
   setPreviewPages: (n: number) => void;
+  undo: () => void;
+  redo: () => void;
 
   // sections
   updateSection: (id: string, patch: Record<string, unknown>) => void;
@@ -42,6 +47,35 @@ interface ResumeStore {
 
 // --- autosave (debounced) ---
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Most specific block that differs between two snapshots (edited or added) → the
+// thing to spotlight after undo/redo. Prefer the changed entry/group over its
+// whole section; fall back to the section for section-level changes (title,
+// visibility, column). Pure removals return null (nothing on screen).
+let flashN = 0;
+const children = (s: ResumeSection): { id: string }[] =>
+  (s as unknown as { entries?: { id: string }[]; groups?: { id: string }[] }).entries ??
+  (s as unknown as { groups?: { id: string }[] }).groups ?? [];
+
+function changedChildId(prev: ResumeSection, next: ResumeSection): string | null {
+  const before = new Map(children(prev).map((k) => [k.id, JSON.stringify(k)]));
+  for (const k of children(next)) {
+    const b = before.get(k.id);
+    if (b === undefined || b !== JSON.stringify(k)) return k.id;
+  }
+  return null;
+}
+
+function flashFor(from: ResumeData, to: ResumeData): { id: string; n: number } | null {
+  const prev = new Map(from.sections.map((s) => [s.id, s]));
+  for (const s of to.sections) {
+    const p = prev.get(s.id);
+    if (p && JSON.stringify(p) === JSON.stringify(s)) continue;
+    const id = (p && changedChildId(p, s)) || s.id;
+    return { id, n: ++flashN };
+  }
+  return null;
+}
 
 function move<T>(arr: T[], from: number, to: number): T[] {
   const copy = arr.slice();
@@ -65,8 +99,15 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
     }, 500);
   };
 
+  // ponytail: snapshot per-commit; typing pushes one entry per keystroke.
+  // Add coalescing (group edits within ~500ms) if undo feels too granular.
   const commit = (sections: ResumeSection[]) => {
-    set({ data: { sections } });
+    const prev = get().data;
+    set({
+      data: { sections },
+      past: prev ? [...get().past, prev].slice(-100) : get().past,
+      future: [],
+    });
     persist();
   };
 
@@ -94,6 +135,25 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
     loaded: false,
     saveStatus: "idle",
     previewPages: 1,
+    past: [],
+    future: [],
+    flash: null,
+
+    undo: () => {
+      const { past, data } = get();
+      if (!past.length || !data) return;
+      const target = past[past.length - 1];
+      set({ data: target, past: past.slice(0, -1), future: [data, ...get().future], flash: flashFor(data, target) });
+      persist();
+    },
+
+    redo: () => {
+      const { future, data } = get();
+      if (!future.length || !data) return;
+      const target = future[0];
+      set({ data: target, future: future.slice(1), past: [...get().past, data], flash: flashFor(data, target) });
+      persist();
+    },
 
     setPreviewPages: (n) => {
       if (get().previewPages !== n) set({ previewPages: n });

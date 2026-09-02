@@ -333,9 +333,10 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
     );
 
   return (
-    <div style={{ width: "210mm", minHeight: "297mm", background: "#fff", padding: `${theme.pagePadY}px ${theme.pagePadX}px`, fontFamily: fontStack(theme.fontFamily) }}>
+    <div data-resume-root style={{ width: "210mm", minHeight: "297mm", background: "#fff", padding: `${theme.pagePadY}px ${theme.pagePadX}px`, fontFamily: fontStack(theme.fontFamily) }}>
       {c && (
         <header
+          data-block-id={contact!.id}
           style={{
             marginBottom: theme.sectionGap,
             textAlign: align,

@@ -76,12 +76,25 @@ function SingleList({ sections }: { sections: ResumeSection[] }) {
 }
 
 export default function Editor() {
-  const { data, theme, loaded, load, moveSection, replaceAll } = useResumeStore();
+  const { data, theme, loaded, load, moveSection, replaceAll, undo, redo } = useResumeStore();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const [tab, setTab] = useState<"edit" | "customize">("edit");
   const [atsOpen, setAtsOpen] = useState(false);
 
   useEffect(() => { load(); }, [load]);
+
+  // Cmd/Ctrl+Z undo, +Shift for redo. Skips when typing so native text undo works.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      const el = e.target as HTMLElement;
+      if (el.isContentEditable || ["INPUT", "TEXTAREA"].includes(el.tagName)) return;
+      e.preventDefault();
+      e.shiftKey ? redo() : undo();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo]);
 
   if (!loaded || !data) {
     return <div style={{ height: "100vh", display: "grid", placeItems: "center" }}><Spin size="large" /></div>;

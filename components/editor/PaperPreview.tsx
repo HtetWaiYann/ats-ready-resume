@@ -93,6 +93,34 @@ export default function PaperPreview({
   }, []);
 
   const scale = zoom === "fit" ? fitScale : zoom;
+
+  // Undo/redo: scroll the changed block into view. Blocks render (clipped) on
+  // every sheet, so we measure page 0's copy — which carries the same break
+  // offsets — to find which page holds the visible instance, then scroll that
+  // instance to just below the pane's top edge.
+  const flash = useResumeStore((s) => s.flash);
+  useEffect(() => {
+    if (!flash) return;
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const raf = requestAnimationFrame(() => {
+      const root = wrap.querySelector<HTMLElement>('[data-page="0"] [data-resume-root]');
+      const p0 = wrap.querySelector<HTMLElement>(`[data-page="0"] [data-block-id="${flash.id}"]`);
+      const container = scrollParent(wrap);
+      if (root && p0 && container) {
+        const offset = p0.getBoundingClientRect().top - root.getBoundingClientRect().top;
+        const page = Math.min(pages - 1, Math.max(0, Math.floor(offset / (A4_H * scale))));
+        const vis = wrap.querySelector<HTMLElement>(`[data-page="${page}"] [data-block-id="${flash.id}"]`);
+        if (vis) {
+          const delta = vis.getBoundingClientRect().top - container.getBoundingClientRect().top - 100;
+          container.scrollBy({ top: delta, behavior: "smooth" });
+        }
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+    // scale/pages read fresh via the flash-triggered re-render; keep deps to the signal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flash]);
   const pct = Math.round(scale * 100);
   const stepTo = (v: number) => setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(v * 100) / 100)));
 
@@ -107,7 +135,7 @@ export default function PaperPreview({
       </div>
 
       {Array.from({ length: pages }).map((_, i) => (
-        <div key={i} style={{ marginBottom: 30 }}>
+        <div key={i} data-page={i} style={{ marginBottom: 30 }}>
           {/* Sizer reclaims the scaled footprint so the pane never overflows;
               the sheet inside scales from the top-left corner to fill it. */}
           <div style={{ width: A4_W * scale, height: A4_H * scale }}>
@@ -186,6 +214,17 @@ export default function PaperPreview({
       </div>
     </div>
   );
+}
+
+// Nearest scrollable ancestor — the preview pane that actually scrolls.
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  let n = el.parentElement;
+  while (n) {
+    const oy = getComputedStyle(n).overflowY;
+    if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight) return n;
+    n = n.parentElement;
+  }
+  return null;
 }
 
 function ZoomBtn({ children, onClick, disabled, label }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; label: string }) {

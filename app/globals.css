@@ -301,3 +301,50 @@ body {
     transform: translate(-7px, -50%);
   }
 }
+/* Undo/redo: a paired control cluster echoing the Segmented tab track */
+.ur-group {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f1f3;
+  border-radius: 9px;
+  padding: 2px;
+}
+.ur-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  color: #83848c;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.ur-btn:hover:not(:disabled) {
+  background: #fff;
+  color: #17181c;
+  box-shadow: 0 1px 2px rgba(23, 24, 28, 0.08);
+}
+.ur-btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+.ur-btn:disabled {
+  color: #cccdd2;
+  cursor: default;
+}
+.ur-div {
+  width: 1px;
+  height: 15px;
+  background: #e2e2e6;
+}
+
+/* Toolbar shrinks gracefully: at tighter widths drop the "Saved" word (the dot
+   stays) so the title and action buttons keep their room. App is desktop-only,
+   so this covers ~1024px up. */
+@media (max-width: 1180px) {
+  .tb-status-text {
+    display: none;
+  }
+}
