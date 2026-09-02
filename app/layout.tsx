@@ -4,7 +4,7 @@ import "./globals.css";
 import Providers from "./providers";
 import ViewportGuard from "@/components/ViewportGuard";
 
-const SITE_URL = "https://www.htetwaiyan.com";
+const SITE_URL = "https://resume.htetwaiyan.com";
 const DESCRIPTION = "ATS-friendly, lightweight, local-only resume editor. Build and export a clean, parseable resume — no account, no server, your data stays in your browser.";
 
 export const metadata: Metadata = {
