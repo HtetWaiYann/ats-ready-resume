@@ -56,3 +56,248 @@ body {
 .rail-scroll::-webkit-scrollbar-thumb:hover {
   background: #c2c3cb;
 }
+
+/* ============================================================
+   Small-screen guard — the editor needs a wide canvas (≥1024px).
+   Hidden on desktop; overlays everything below the breakpoint.
+   ============================================================ */
+.vg {
+  display: none;
+}
+@media (max-width: 1023.98px) {
+  .vg {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: grid;
+    place-items: center;
+    overflow: auto;
+    padding: 32px 26px;
+    background: radial-gradient(120% 90% at 50% 0%, #edeef1 0%, #e2e2e6 72%);
+    font-family: var(--font-ui);
+    color: #111827;
+  }
+  /* Freeze the editor behind the overlay. */
+  body {
+    overflow: hidden;
+  }
+}
+
+.vg-card {
+  width: 100%;
+  max-width: 460px;
+  text-align: center;
+}
+
+/* --- the signature: a cramped A4 sheet with side calipers --- */
+.vg-stage {
+  position: relative;
+  width: 232px;
+  height: 200px;
+  margin: 0 auto 30px;
+  display: grid;
+  place-items: center;
+}
+.vg-paper {
+  position: relative;
+  width: 132px;
+  height: 176px;
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 14px 36px rgba(16, 24, 40, 0.18), 0 1px 3px rgba(16, 24, 40, 0.1);
+  padding: 15px 13px;
+  display: flex;
+  flex-direction: column;
+  transform-origin: center;
+}
+.vg-name {
+  width: 48%;
+  height: 9px;
+  border-radius: 3px;
+  background: #111827;
+}
+.vg-head {
+  width: 32%;
+  height: 4px;
+  border-radius: 2px;
+  background: #9db8f8;
+  margin-top: 6px;
+}
+.vg-cols {
+  display: flex;
+  gap: 9px;
+  margin-top: 13px;
+  flex: 1;
+}
+.vg-col {
+  flex: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vg-col--side {
+  flex: 1;
+}
+.vg-col i {
+  display: block;
+  height: 3.5px;
+  border-radius: 2px;
+  background: #e4e7ec;
+}
+.vg-col i:first-child {
+  width: 68%;
+  background: #cfd4dc;
+}
+.vg-col--side i {
+  background: #eceff3;
+}
+
+/* accent-blue brackets that pulse inward — "not enough width" */
+.vg-cal {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 66px;
+  background: #2563eb;
+  transform: translateY(-50%);
+}
+.vg-cal::before,
+.vg-cal::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: #2563eb;
+}
+.vg-cal::before {
+  top: 0;
+}
+.vg-cal::after {
+  bottom: 0;
+}
+.vg-cal-l {
+  left: calc(50% - 82px);
+}
+.vg-cal-l::before,
+.vg-cal-l::after {
+  left: 0;
+}
+.vg-cal-r {
+  right: calc(50% - 82px);
+}
+.vg-cal-r::before,
+.vg-cal-r::after {
+  right: 0;
+}
+
+/* --- copy --- */
+.vg-eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9aa1ad;
+}
+.vg-title {
+  margin: 9px 0 0;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.22;
+}
+.vg-body {
+  margin: 12px auto 0;
+  max-width: 36ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6b7280;
+}
+.vg-chip {
+  margin-top: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid #e6e6ea;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: #6b7280;
+}
+.vg-chip svg {
+  color: #2563eb;
+}
+.vg-chip b {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* --- motion (opt-in; static and fully visible when reduced) --- */
+@media (prefers-reduced-motion: no-preference) {
+  .vg-stage {
+    animation: vg-in 0.55s 0.02s both cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .vg-paper {
+    animation: vg-breathe 4.6s 0.9s ease-in-out infinite;
+  }
+  .vg-cal-l {
+    animation: vg-squeeze-l 2.6s ease-in-out infinite;
+  }
+  .vg-cal-r {
+    animation: vg-squeeze-r 2.6s ease-in-out infinite;
+  }
+  .vg-eyebrow {
+    animation: vg-in 0.5s 0.12s both cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .vg-title {
+    animation: vg-in 0.5s 0.18s both cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .vg-body {
+    animation: vg-in 0.5s 0.26s both cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .vg-chip {
+    animation: vg-in 0.5s 0.34s both cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+}
+@keyframes vg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes vg-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.985);
+  }
+}
+@keyframes vg-squeeze-l {
+  0%,
+  100% {
+    transform: translate(0, -50%);
+  }
+  50% {
+    transform: translate(7px, -50%);
+  }
+}
+@keyframes vg-squeeze-r {
+  0%,
+  100% {
+    transform: translate(0, -50%);
+  }
+  50% {
+    transform: translate(-7px, -50%);
+  }
+}
