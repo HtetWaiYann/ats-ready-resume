@@ -14,6 +14,23 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+// Slider + number input. Explicit track/handle color so it doesn't read as disabled
+// against the light theme primary.
+function NumRow({ label, min, max, step, value, onChange }: {
+  label: string; min: number; max: number; step?: number; value: number; onChange: (v: number) => void;
+}) {
+  return (
+    <Row label={label}>
+      <Slider
+        min={min} max={max} step={step} value={value} onChange={onChange}
+        style={{ width: 120 }}
+        styles={{ track: { background: "#4f46e5" }, handle: { borderColor: "#4f46e5" } }}
+      />
+      <InputNumber size="small" min={min} max={max} step={step} value={value} onChange={(v) => v != null && onChange(v)} style={{ width: 64 }} />
+    </Row>
+  );
+}
+
 function Head({ children, first }: { children: React.ReactNode; first?: boolean }) {
   return (
     <>
@@ -42,10 +59,7 @@ export default function ThemePanel() {
       label: TEXT_ROLE_LABELS[role],
       children: (
         <>
-          <Row label="Size">
-            <Slider min={7} max={44} step={0.5} value={s.fontSize} onChange={(v) => setText(role, { fontSize: v })} style={{ width: 120 }} />
-            <InputNumber size="small" min={7} max={44} step={0.5} value={s.fontSize} onChange={(v) => v != null && setText(role, { fontSize: v })} style={{ width: 64 }} />
-          </Row>
+          <NumRow label="Size" min={7} max={44} value={s.fontSize} step={0.5} onChange={(v) => setText(role, { fontSize: v })}/>
           <Row label="Weight">
             <Select
               size="small"
@@ -178,14 +192,8 @@ export default function ThemePanel() {
               options={[{ value: "left", label: "Left" }, { value: "right", label: "Right" }]}
             />
           </Row>
-          <Row label="Width">
-            <Slider min={25} max={45} value={t.sidebarRatio} onChange={(v) => edit({ sidebarRatio: v })} style={{ width: 120 }} />
-            <span style={{ width: 34, textAlign: "right", fontSize: 12 }}>{t.sidebarRatio}%</span>
-          </Row>
-          <Row label="Column gap">
-            <Slider min={8} max={56} value={t.columnGap} onChange={(v) => edit({ columnGap: v })} style={{ width: 120 }} />
-            <span style={{ width: 34, textAlign: "right", fontSize: 12 }}>{t.columnGap}</span>
-          </Row>
+          <NumRow label="Width" min={25} max={45} value={t.sidebarRatio} onChange={(v) => edit({ sidebarRatio: v })} />
+          <NumRow label="Column gap" min={8} max={56} value={t.columnGap} onChange={(v) => edit({ columnGap: v })} />
           <Row label="Background tint">
             <ColorPicker
               size="small"
@@ -199,14 +207,8 @@ export default function ThemePanel() {
       )}
 
       <Head>Density</Head>
-      <Row label="Page margin ↔">
-        <Slider min={20} max={72} value={t.pagePadX} onChange={(v) => edit({ pagePadX: v })} style={{ width: 120 }} />
-        <span style={{ width: 28, textAlign: "right", fontSize: 12 }}>{t.pagePadX}</span>
-      </Row>
-      <Row label="Page margin ↕">
-        <Slider min={20} max={72} value={t.pagePadY} onChange={(v) => edit({ pagePadY: v })} style={{ width: 120 }} />
-        <span style={{ width: 28, textAlign: "right", fontSize: 12 }}>{t.pagePadY}</span>
-      </Row>
+      <NumRow label="Page margin ↔" min={20} max={72} value={t.pagePadX} onChange={(v) => edit({ pagePadX: v })} />
+      <NumRow label="Page margin ↕" min={20} max={72} value={t.pagePadY} onChange={(v) => edit({ pagePadY: v })} />
       <Row label="Entry divider">
         <Segmented
           size="small"
@@ -244,18 +246,9 @@ export default function ThemePanel() {
       />
 
       <Head>Spacing</Head>
-      <Row label="Between sections">
-        <Slider min={6} max={48} value={t.sectionGap} onChange={(v) => edit({ sectionGap: v })} style={{ width: 140 }} />
-        <span style={{ width: 28, textAlign: "right", fontSize: 12 }}>{t.sectionGap}</span>
-      </Row>
-      <Row label="Title → content">
-        <Slider min={2} max={28} value={t.titleContentGap} onChange={(v) => edit({ titleContentGap: v })} style={{ width: 140 }} />
-        <span style={{ width: 28, textAlign: "right", fontSize: 12 }}>{t.titleContentGap}</span>
-      </Row>
-      <Row label="Between entries">
-        <Slider min={2} max={32} value={t.entryGap} onChange={(v) => edit({ entryGap: v })} style={{ width: 140 }} />
-        <span style={{ width: 28, textAlign: "right", fontSize: 12 }}>{t.entryGap}</span>
-      </Row>
+      <NumRow label="Between sections" min={6} max={48} value={t.sectionGap} onChange={(v) => edit({ sectionGap: v })} />
+      <NumRow label="Title → content" min={2} max={28} value={t.titleContentGap} onChange={(v) => edit({ titleContentGap: v })} />
+      <NumRow label="Between entries" min={2} max={32} value={t.entryGap} onChange={(v) => edit({ entryGap: v })}/>
 
       <Head>Colors</Head>
       {(Object.keys(COLOR_LABELS) as (keyof ResumeTheme["colors"])[]).map((key) => (

@@ -200,18 +200,60 @@ const STOP = new Set(
   ),
 );
 
-const tokenize = (s: string): string[] => (s.toLowerCase().match(/[a-z0-9][a-z0-9+#.]*/g) ?? []).filter((w) => w.length >= 3 && !STOP.has(w) && !/^\d+$/.test(w));
+// Boilerplate that shows up in nearly every JD but isn't a real skill/keyword.
+const JD_STOP = new Set(
+  "years year experience required require preferred candidate candidates ideal looking join company companies opportunity responsibilities responsibility requirements requirement qualifications qualification knowledge understanding proficiency proficient familiarity familiar background degree bachelor master equivalent field environment position member members must nice looking include includes including".split(
+    /\s+/,
+  ),
+);
+
+// Crude, *consistent* suffix strip so "developed"/"developing"/"development" collide on match.
+// ponytail: not a real stemmer — good enough for matching; swap in a stemmer lib if misses matter.
+function stem(w: string): string {
+  if (w.length >= 6) w = w.replace(/(ing|ed|ment|tions?)$/, "");
+  if (w.length >= 5) w = w.replace(/(es|s)$/, "");
+  return w;
+}
+
+const words = (s: string): string[] =>
+  (s.toLowerCase().match(/[a-z0-9][a-z0-9+#.]*/g) ?? [])
+    .map((w) => w.replace(/\.+$/, "")) // keep "node.js", drop sentence-ending "kubernetes."
+    .filter((w) => w.length >= 2 && !STOP.has(w) && !JD_STOP.has(w) && !/^\d+$/.test(w));
+
+/** Unigrams (len>=3) + adjacent two-word phrases, e.g. "machine learning". */
+function candidates(s: string): string[] {
+  const w = words(s);
+  const out: string[] = [];
+  for (let i = 0; i < w.length; i++) {
+    if (w[i].length >= 3) out.push(w[i]);
+    if (i + 1 < w.length) out.push(w[i] + " " + w[i + 1]);
+  }
+  return out;
+}
 
 export type KeywordMatch = { coverage: number; matched: string[]; missing: string[]; total: number };
 
 /** Top keywords from a job description and whether the resume covers them. */
 export function keywordMatch(jd: string, data: ResumeData, limit = 30): KeywordMatch {
   const freq = new Map<string, number>();
-  for (const w of tokenize(jd)) freq.set(w, (freq.get(w) ?? 0) + 1);
-  const keywords = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([w]) => w);
-  const have = new Set(tokenize(resumeText(data)));
-  const matched = keywords.filter((k) => have.has(k));
-  const missing = keywords.filter((k) => !have.has(k));
+  for (const c of candidates(jd)) freq.set(c, (freq.get(c) ?? 0) + 1);
+  // Phrases only survive if they recur (>=2) — filters random cross-sentence pairs; prefer phrases on ties.
+  const ranked = [...freq.entries()]
+    .filter(([k, n]) => (k.includes(" ") ? n >= 2 : true))
+    .sort((a, b) => b[1] - a[1] || Number(b[0].includes(" ")) - Number(a[0].includes(" ")));
+
+  const keywords: string[] = [];
+  for (const [k] of ranked) {
+    if (keywords.length >= limit) break;
+    // Drop a unigram already contained in a chosen phrase ("learning" once "machine learning" is in).
+    if (!k.includes(" ") && keywords.some((p) => p.includes(" ") && p.split(" ").includes(k))) continue;
+    keywords.push(k);
+  }
+
+  const have = new Set(words(resumeText(data)).map(stem));
+  const has = (k: string) => k.split(" ").every((t) => have.has(stem(t)));
+  const matched = keywords.filter(has);
+  const missing = keywords.filter((k) => !has(k));
   return { coverage: keywords.length ? Math.round((matched.length / keywords.length) * 100) : 0, matched, missing, total: keywords.length };
 }
 
@@ -230,8 +272,13 @@ if (process.env.ATS_SELFCHECK) {
   console.assert(rep.checks.find((c) => c.id === "weak")!.status === "warn", "weak opener flagged");
   console.assert(rep.checks.find((c) => c.id === "layout")!.status === "pass", "one-col pass");
   console.assert(rep.score > 60 && rep.score <= 100, `score in range, got ${rep.score}`);
-  const km = keywordMatch("Looking for a React and Python developer with AWS and Kubernetes experience", data);
+  const km = keywordMatch(
+    "Looking for a React and Python developer. Developing machine learning pipelines on AWS and Kubernetes. Machine learning experience required.",
+    data,
+  );
   console.assert(km.matched.includes("react") && km.matched.includes("python"), "matched react/python");
   console.assert(km.missing.includes("kubernetes"), "kubernetes missing");
+  console.assert(km.missing.includes("machine learning"), "recurring phrase extracted, got: " + km.missing.join(","));
+  console.assert(!km.missing.includes("candidate") && !km.missing.includes("required"), "boilerplate dropped");
   console.log("ats self-check ok", { score: rep.score, coverage: km.coverage, missing: km.missing.slice(0, 5) });
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
-import { Drawer, Input, Progress, Tag } from "antd";
-import { CheckCircleFilled, WarningFilled, CloseCircleFilled } from "@ant-design/icons";
+import { Alert, Drawer, Input, Progress, Tag } from "antd";
+import { CheckCircleFilled, WarningFilled, CloseCircleFilled, InfoCircleOutlined } from "@ant-design/icons";
 import { useResumeStore } from "@/store/resumeStore";
 import { runAtsChecks, keywordMatch, type AtsCheck, type CheckGroup, type CheckStatus } from "@/lib/atsCheck";
 
@@ -31,6 +31,8 @@ function CheckRow({ check }: { check: AtsCheck }) {
   );
 }
 
+const SHOW_JOB_MATCH = false; // hidden until JD keyword extraction is improved
+
 export default function AtsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data, theme, previewPages } = useResumeStore();
   const [jd, setJd] = useState("");
@@ -42,6 +44,16 @@ export default function AtsPanel({ open, onClose }: { open: boolean; onClose: ()
     <Drawer title="ATS check" open={open} onClose={onClose} size="default">
       {report && (
         <>
+          <Alert
+            type="info"
+            style={{ marginBottom: 16, padding: "6px 10px" }}
+            message={
+              <span style={{ fontSize: 11, lineHeight: 1.4 }}>
+                <strong>Not an exact ATS score.</strong> <br/>A quick sanity check for the basics — contact info, standard sections, dates, quantified bullets, machine-readable format. Real ATS platforms each score differently, so use this to catch obvious gaps, not a guarantee.
+              </span>
+            }
+          />
+
           {/* Score */}
           <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 6 }}>
             <Progress
@@ -76,7 +88,8 @@ export default function AtsPanel({ open, onClose }: { open: boolean; onClose: ()
             );
           })}
 
-          {/* Job-description keyword match */}
+          {/* Job-description keyword match — hidden until extraction is improved. ponytail: flip to re-enable. */}
+          {SHOW_JOB_MATCH && (<>
           <div className="eyebrow" style={{ marginBottom: 10 }}>Job match</div>
           <Input.TextArea
             rows={5}
@@ -104,6 +117,7 @@ export default function AtsPanel({ open, onClose }: { open: boolean; onClose: ()
               )}
             </div>
           )}
+          </>)}
         </>
       )}
     </Drawer>
