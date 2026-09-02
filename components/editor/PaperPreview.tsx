@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import MyResume from "@/components/templates/MyResume";
 import { paginate, type Block } from "@/lib/paginate";
+import { useResumeStore } from "@/store/resumeStore";
 import type { ResumeData } from "@/types/resume";
 import type { ResumeTheme } from "@/types/theme";
 
@@ -66,7 +67,9 @@ export default function PaperPreview({
         bottom = Math.max(bottom, maxBottom);
       }
       setBreaks(merged);
-      setPages(Math.max(1, Math.ceil(Math.max(bottom, el.scrollHeight) / A4_H)));
+      const n = Math.max(1, Math.ceil(Math.max(bottom, el.scrollHeight) / A4_H));
+      setPages(n);
+      useResumeStore.getState().setPreviewPages(n);
     };
     compute();
     const ro = new ResizeObserver(compute);

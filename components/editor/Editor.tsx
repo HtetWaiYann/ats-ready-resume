@@ -20,6 +20,7 @@ import ContactForm from "./ContactForm";
 import SectionPanel from "./SectionPanel";
 import ThemePanel from "./ThemePanel";
 import PaperPreview from "./PaperPreview";
+import AtsPanel from "./AtsPanel";
 import FontLoader from "@/components/FontLoader";
 
 function SortableSectionPanel({ section }: { section: ResumeSection }) {
@@ -78,6 +79,7 @@ export default function Editor() {
   const { data, theme, loaded, load, moveSection, replaceAll } = useResumeStore();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const [tab, setTab] = useState<"edit" | "customize">("edit");
+  const [atsOpen, setAtsOpen] = useState(false);
 
   useEffect(() => { load(); }, [load]);
 
@@ -126,7 +128,7 @@ export default function Editor() {
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#e6e7ea" }}>
       <FontLoader family={theme.fontFamily} />
       <header style={{ height: 60, background: "#fff", borderBottom: "1px solid #ececef", flexShrink: 0, zIndex: 5 }}>
-        <Toolbar tab={tab} onTab={setTab} />
+        <Toolbar tab={tab} onTab={setTab} onOpenAts={() => setAtsOpen(true)} />
       </header>
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -178,6 +180,8 @@ export default function Editor() {
           <PaperPreview data={data} theme={theme} />
         </div>
       </div>
+
+      <AtsPanel open={atsOpen} onClose={() => setAtsOpen(false)} />
     </div>
   );
 }

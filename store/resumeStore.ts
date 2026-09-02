@@ -19,8 +19,10 @@ interface ResumeStore {
   theme: ResumeTheme;
   loaded: boolean;
   saveStatus: SaveStatus;
+  previewPages: number; // last page count from PaperPreview (for the ATS check)
   load: () => Promise<void>;
   setTheme: (theme: ResumeTheme) => void;
+  setPreviewPages: (n: number) => void;
 
   // sections
   updateSection: (id: string, patch: Record<string, unknown>) => void;
@@ -91,6 +93,11 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
     theme: DEFAULT_THEME,
     loaded: false,
     saveStatus: "idle",
+    previewPages: 1,
+
+    setPreviewPages: (n) => {
+      if (get().previewPages !== n) set({ previewPages: n });
+    },
 
     load: async () => {
       let rec = await getResume();

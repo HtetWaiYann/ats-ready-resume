@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button, Dropdown, Segmented, App } from "antd";
 import {
   PlusOutlined,
@@ -10,21 +10,25 @@ import {
   DownOutlined,
   TrademarkCircleFilled,
   DownloadOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import type { SectionType, ResumeData } from "@/types/resume";
 import type { ResumeTheme } from "@/types/theme";
 import { useResumeStore } from "@/store/resumeStore";
 import { download, timestamp, toPlainText, isValidResumeData } from "@/lib/exporters";
+import { runAtsChecks } from "@/lib/atsCheck";
 import MyResumePdf from "@/components/pdf-templates/MyResumePdf";
 
 const ADDABLE: SectionType[] = ["summary", "experience", "education", "skills", "projects", "certifications", "languages", "custom"];
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+const scoreColor = (n: number) => (n >= 80 ? "#3f9142" : n >= 60 ? "#d9930b" : "#d64545");
 
-export default function Toolbar({ tab, onTab }: { tab: "edit" | "customize"; onTab: (t: "edit" | "customize") => void }) {
+export default function Toolbar({ tab, onTab, onOpenAts }: { tab: "edit" | "customize"; onTab: (t: "edit" | "customize") => void; onOpenAts: () => void }) {
   const { message } = App.useApp();
-  const { data, theme, saveStatus, addSection, replaceAll, setTheme } = useResumeStore();
+  const { data, theme, saveStatus, previewPages, addSection, replaceAll, setTheme } = useResumeStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const score = useMemo(() => (data ? runAtsChecks(data, theme, previewPages).score : 0), [data, theme, previewPages]);
 
   if (!data) return null;
 
@@ -92,6 +96,10 @@ export default function Toolbar({ tab, onTab }: { tab: "edit" | "customize"; onT
 
       {/* Actions */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
+        <Button icon={<SafetyCertificateOutlined style={{ color: scoreColor(score) }} />} onClick={onOpenAts}>
+          ATS
+          <span className="mono" style={{ marginLeft: 6, fontWeight: 700, color: scoreColor(score) }}>{score}</span>
+        </Button>
         <Dropdown
           menu={{ items: ADDABLE.map((t) => ({ key: t, label: cap(t) })), onClick: ({ key }) => addSection(key as SectionType) }}
         >
