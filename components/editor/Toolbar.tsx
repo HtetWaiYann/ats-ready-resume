@@ -20,7 +20,7 @@ import MyResumePdf from "@/components/pdf-templates/MyResumePdf";
 const ADDABLE: SectionType[] = ["summary", "experience", "education", "skills", "projects", "certifications", "languages", "custom"];
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
-export default function Toolbar({ onOpenDesign }: { onOpenDesign: () => void }) {
+export default function Toolbar({ tab, onTab }: { tab: "edit" | "customize"; onTab: (t: "edit" | "customize") => void }) {
   const { message } = App.useApp();
   const { data, theme, saveStatus, addSection, replaceAll, setTheme } = useResumeStore();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -81,8 +81,8 @@ export default function Toolbar({ onOpenDesign }: { onOpenDesign: () => void }) 
 
       {/* Center tabs */}
       <Segmented
-        value="edit"
-        onChange={(v) => v === "customize" && onOpenDesign()}
+        value={tab}
+        onChange={(v) => onTab(v as "edit" | "customize")}
         options={[
           { label: "Edit", value: "edit" },
           { label: "Customize", value: "customize" },

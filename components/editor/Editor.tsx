@@ -77,7 +77,7 @@ function SingleList({ sections }: { sections: ResumeSection[] }) {
 export default function Editor() {
   const { data, theme, loaded, load, moveSection, replaceAll } = useResumeStore();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-  const [designOpen, setDesignOpen] = useState(false);
+  const [tab, setTab] = useState<"edit" | "customize">("edit");
 
   useEffect(() => { load(); }, [load]);
 
@@ -126,28 +126,40 @@ export default function Editor() {
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#e6e7ea" }}>
       <FontLoader family={theme.fontFamily} />
       <header style={{ height: 60, background: "#fff", borderBottom: "1px solid #ececef", flexShrink: 0, zIndex: 5 }}>
-        <Toolbar onOpenDesign={() => setDesignOpen(true)} />
+        <Toolbar tab={tab} onTab={setTab} />
       </header>
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Editing rail */}
-        <aside
-          className="rail-scroll"
-          style={{ width: 480, flexShrink: 0, overflowY: "auto", background: "#f6f6f7", borderRight: "1px solid #e7e7ea" }}
-        >
-          <div style={{ padding: "20px 20px 60px" }}>
-            {contact && <ContactForm section={contact} />}
+        {/* Editing rail — Edit / Customize panels on a sliding track */}
+        <aside style={{ width: 480, flexShrink: 0, overflow: "hidden", background: "#f6f6f7", borderRight: "1px solid #e7e7ea" }}>
+          <div
+            style={{
+              display: "flex",
+              width: "200%",
+              height: "100%",
+              transform: tab === "edit" ? "translateX(0)" : "translateX(-50%)",
+              transition: "transform .3s cubic-bezier(.4,0,.2,1)",
+            }}
+          >
+            <div className="rail-scroll" style={{ width: "50%", height: "100%", overflowY: "auto" }} aria-hidden={tab !== "edit"}>
+              <div style={{ padding: "20px 20px 60px" }}>
+                {contact && <ContactForm section={contact} />}
 
-            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-              {theme.layout === "one" ? (
-                <SingleList sections={nonContact} />
-              ) : (
-                <>
-                  <Column id="main" label="Main column" sections={main} />
-                  <Column id="sidebar" label="Sidebar" sections={sidebar} />
-                </>
-              )}
-            </DndContext>
+                <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
+                  {theme.layout === "one" ? (
+                    <SingleList sections={nonContact} />
+                  ) : (
+                    <>
+                      <Column id="main" label="Main column" sections={main} />
+                      <Column id="sidebar" label="Sidebar" sections={sidebar} />
+                    </>
+                  )}
+                </DndContext>
+              </div>
+            </div>
+            <div className="rail-scroll" style={{ width: "50%", height: "100%", overflowY: "auto" }} aria-hidden={tab !== "customize"}>
+              <ThemePanel />
+            </div>
           </div>
         </aside>
 
@@ -166,8 +178,6 @@ export default function Editor() {
           <PaperPreview data={data} theme={theme} />
         </div>
       </div>
-
-      <ThemePanel open={designOpen} onClose={() => setDesignOpen(false)} />
     </div>
   );
 }

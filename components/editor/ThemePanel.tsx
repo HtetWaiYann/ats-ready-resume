@@ -1,5 +1,5 @@
 "use client";
-import { Drawer, Select, Slider, ColorPicker, Collapse, InputNumber, Divider, Button, Segmented, Tag, Switch } from "antd";
+import { Select, Slider, ColorPicker, Collapse, InputNumber, Divider, Button, Segmented, Tag, Switch } from "antd";
 import type { ResumeTheme, TextRole } from "@/types/theme";
 import { TEXT_ROLE_LABELS, COLOR_LABELS } from "@/types/theme";
 import { useResumeStore } from "@/store/resumeStore";
@@ -23,7 +23,7 @@ function Head({ children, first }: { children: React.ReactNode; first?: boolean 
   );
 }
 
-export default function ThemePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function ThemePanel() {
   const { theme, setTheme } = useResumeStore();
   const t = theme;
 
@@ -67,14 +67,12 @@ export default function ThemePanel({ open, onClose }: { open: boolean; onClose: 
   });
 
   return (
-    <Drawer
-      title="Design"
-      open={open}
-      onClose={onClose}
-      size="default"
-      extra={<Button size="small" onClick={() => setTheme(DEFAULT_THEME)}>Reset</Button>}
-    >
-      <Head first>Design</Head>
+    <div style={{ padding: "20px 20px 60px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#17181c" }}>Design</span>
+        <Button size="small" onClick={() => setTheme(DEFAULT_THEME)}>Reset</Button>
+      </div>
+      <Head first>Presets</Head>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {PRESET_LIST.map((p) => {
           const active = t.preset === p.key;
@@ -273,6 +271,6 @@ export default function ThemePanel({ open, onClose }: { open: boolean; onClose: 
 
       <Head>Typography</Head>
       <Collapse accordion size="small" items={typographyItems} />
-    </Drawer>
+    </div>
   );
 }
