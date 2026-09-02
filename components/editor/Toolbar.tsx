@@ -124,6 +124,9 @@ export default function Toolbar({ tab, onTab, onOpenAts }: { tab: "edit" | "cust
         >
           <Button type="primary" icon={<DownloadOutlined />} loading={busy}>Download <DownOutlined style={{ fontSize: 10 }} /></Button>
         </Dropdown>
+        <a href="https://www.buymeacoffee.com/htet_wai_yan" target="_blank" rel="noreferrer">
+          <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style={{ height: 36 }} />
+        </a>
       </div>
       <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ""; }} />
     </div>
