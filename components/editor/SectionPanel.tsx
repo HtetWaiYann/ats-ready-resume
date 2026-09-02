@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Segmented, Switch, Button, App, Tooltip, Input, Modal, Popover } from "antd";
-import { DeleteOutlined, EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Segmented, Switch, Button, App, Tooltip, Input, Modal } from "antd";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import type { ResumeSection } from "@/types/resume";
 import { useResumeStore } from "@/store/resumeStore";
 import SectionForms from "./SectionForms";
@@ -19,8 +19,9 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function SectionPanel({ section, handle }: { section: ResumeSection; handle: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const { toggleSectionVisible, removeSection, moveSection, updateSection } = useResumeStore();
+  const { toggleSectionVisible, removeSection, moveSection, updateSection, theme } = useResumeStore();
   const { modal } = App.useApp();
+  const twoCol = theme.layout === "two";
 
   return (
     <div
@@ -75,23 +76,6 @@ export default function SectionPanel({ section, handle }: { section: ResumeSecti
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: -0.2 }}>{section.title}</span>
             <span className="eyebrow" style={{ fontSize: 9.5, color: "#bcbdc4" }}>{TYPE_LABEL[section.type] ?? ""}</span>
-            {section.type === "custom" && (
-              <Popover
-                placement="bottomLeft"
-                title="Formatting"
-                content={
-                  <div style={{ fontSize: 13, lineHeight: 1.9 }}>
-                    <div><code>**bold**</code> → <strong>bold</strong></div>
-                    <div><code>*italic*</code> → <em>italic</em></div>
-                    <div><code>[text](url)</code> → link</div>
-                    <div><code>- item</code> at line start → bullet</div>
-                    <div>Blank line → new paragraph</div>
-                  </div>
-                }
-              >
-                <InfoCircleOutlined style={{ color: "#a6a7af", fontSize: 15, cursor: "help" }} />
-              </Popover>
-            )}
           </div>
         }
       >
@@ -100,17 +84,19 @@ export default function SectionPanel({ section, handle }: { section: ResumeSecti
             <span className="eyebrow" style={{ display: "block", fontSize: 9.5, marginBottom: 5 }}>Section title</span>
             <Input value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} />
           </label>
-          <div>
-            <span className="eyebrow" style={{ display: "block", fontSize: 9.5, marginBottom: 5 }}>Column</span>
-            <Segmented
-              value={section.column}
-              onChange={(v) => moveSection(section.id, v as "main" | "sidebar", 999)}
-              options={[
-                { label: "Main", value: "main" },
-                { label: "Sidebar", value: "sidebar" },
-              ]}
-            />
-          </div>
+          {twoCol && (
+            <div>
+              <span className="eyebrow" style={{ display: "block", fontSize: 9.5, marginBottom: 5 }}>Column</span>
+              <Segmented
+                value={section.column}
+                onChange={(v) => moveSection(section.id, v as "main" | "sidebar", 999)}
+                options={[
+                  { label: "Main", value: "main" },
+                  { label: "Sidebar", value: "sidebar" },
+                ]}
+              />
+            </div>
+          )}
           <Button
             danger
             icon={<DeleteOutlined />}

@@ -14,6 +14,7 @@ import type {
 import type { ResumeTheme, TextRole } from "@/types/theme";
 import { httpsHref, displayUrl, mailto, tel } from "@/lib/links";
 import { parseRich, type Run } from "@/lib/richText";
+import { fontStack } from "@/lib/theme";
 
 const HAIR = "#dfe3e8"; // dashed entry separators
 
@@ -62,6 +63,7 @@ const ICONS = {
 // sections onto the next A4 sheet; empty in the PDF template and web export.
 export default function MyResume({ data, theme, breaks = {} }: { data: ResumeData; theme: ResumeTheme; breaks?: Record<string, number> }) {
   const r = useRole(theme);
+  const linkDeco = theme.linkUnderline ? "underline" : "none";
   const contact = data.sections.find((s) => s.type === "contact") as ContactSection | undefined;
   const visible = data.sections.filter((s) => s.visible && s.type !== "contact");
   const main = visible.filter((s) => s.column === "main");
@@ -79,7 +81,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
       {runs.map((run, i) => {
         const style: React.CSSProperties = { fontWeight: run.bold ? 700 : undefined, fontStyle: run.italic ? "italic" : undefined };
         return run.href ? (
-          <a key={i} href={httpsHref(run.href)} target="_blank" rel="noreferrer" style={{ ...style, color: theme.colors.link, textDecoration: "none" }}>{run.text}</a>
+          <a key={i} href={httpsHref(run.href)} target="_blank" rel="noreferrer" style={{ ...style, color: theme.colors.link, textDecoration: linkDeco }}>{run.text}</a>
         ) : (
           <span key={i} style={style}>{run.text}</span>
         );
@@ -87,17 +89,24 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
     </>
   );
 
+  const dash = theme.bulletStyle === "dash";
   const RichContent = ({ content }: { content: string }) => {
     const blocks = parseRich(content);
     if (!blocks.length) return null;
+    const noMarker = theme.bulletStyle === "none";
     return (
       <div style={{ marginTop: 3 }}>
         {blocks.map((b, i) =>
           b.type === "p" ? (
             <p key={i} style={{ ...r("body"), marginTop: i ? 4 : 0 }}><Inline runs={b.runs} /></p>
           ) : (
-            <ul key={i} style={{ margin: "4px 0 0", paddingLeft: 16, listStyle: "disc" }}>
-              {b.items.map((item, j) => <li key={j} style={{ ...r("body"), marginTop: 2 }}><Inline runs={item} /></li>)}
+            <ul key={i} style={{ margin: "4px 0 0", paddingLeft: noMarker || dash ? 0 : 16, listStyle: dash || noMarker ? "none" : "disc" }}>
+              {b.items.map((item, j) => (
+                <li key={j} style={{ ...r("body"), marginTop: 2, display: dash ? "flex" : undefined, gap: dash ? 6 : undefined }}>
+                  {dash && <span aria-hidden style={{ flexShrink: 0 }}>–</span>}
+                  <span><Inline runs={item} /></span>
+                </li>
+              ))}
             </ul>
           ),
         )}
@@ -106,9 +115,33 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
   };
 
   function EntrySep({ last }: { last: boolean }) {
-    if (last) return null;
-    return <div style={{ borderTop: `1px dashed ${HAIR}`, margin: `${theme.entryGap}px 0` }} />;
+    if (last || theme.entryDivider === "none") return null;
+    return <div style={{ borderTop: `1px ${theme.entryDivider} ${HAIR}`, margin: `${theme.entryGap}px 0` }} />;
   }
+
+  // Title + subtitle + dates/location, honoring entryDateAlign.
+  const EntryHead = ({ title, subtitle, date, location }: { title: string; subtitle?: string; date?: string; location?: string }) => {
+    const right = theme.entryDateAlign === "right";
+    return (
+      <>
+        {right ? (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+            <div style={r("entryTitle")}>{title}</div>
+            {date && <div style={{ ...r("meta"), whiteSpace: "nowrap" }}>{date}</div>}
+          </div>
+        ) : (
+          <div style={r("entryTitle")}>{title}</div>
+        )}
+        {subtitle && <div style={r("entrySubtitle")}>{subtitle}</div>}
+        {(right ? location : date || location) && (
+          <div style={{ marginTop: 3, display: "flex", flexWrap: "wrap", gap: 14 }}>
+            {!right && date && <MetaRow icon="calendar">{date}</MetaRow>}
+            {location && <MetaRow icon="pin">{location}</MetaRow>}
+          </div>
+        )}
+      </>
+    );
+  };
 
   function SectionBody({ s }: { s: ResumeSection }) {
     switch (s.type) {
@@ -120,12 +153,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
           <>
             {(s as ExperienceSection).entries.map((e, i, arr) => (
               <div key={e.id}>
-                <div style={r("entryTitle")}>{e.role}</div>
-                <div style={r("entrySubtitle")}>{e.company}</div>
-                <div style={{ marginTop: 3, display: "flex", flexWrap: "wrap", gap: 14 }}>
-                  <MetaRow icon="calendar">{dateRange(e.startDate, e.endDate, e.isCurrent)}</MetaRow>
-                  {e.location && <MetaRow icon="pin">{e.location}</MetaRow>}
-                </div>
+                <EntryHead title={e.role} subtitle={e.company} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
                 <RichContent content={e.content} />
                 <EntrySep last={i === arr.length - 1} />
               </div>
@@ -138,12 +166,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
           <>
             {(s as EducationSection).entries.map((e, i, arr) => (
               <div key={e.id}>
-                <div style={r("entryTitle")}>{e.degree}</div>
-                <div style={r("entrySubtitle")}>{e.school}</div>
-                <div style={{ marginTop: 3, display: "flex", flexWrap: "wrap", gap: 14 }}>
-                  <MetaRow icon="calendar">{dateRange(e.startDate, e.endDate, e.isCurrent)}</MetaRow>
-                  {e.location && <MetaRow icon="pin">{e.location}</MetaRow>}
-                </div>
+                <EntryHead title={e.degree} subtitle={e.school} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
                 <RichContent content={e.content} />
                 <EntrySep last={i === arr.length - 1} />
               </div>
@@ -158,7 +181,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
               <div key={e.id}>
                 <div style={r("entryTitle")}>{e.name}</div>
                 {e.url && (
-                  <a href={httpsHref(e.url)} target="_blank" rel="noreferrer" style={{ marginTop: 2, display: "inline-flex", alignItems: "center", gap: 4, ...r("meta", "link"), textDecoration: "none" }}>
+                  <a href={httpsHref(e.url)} target="_blank" rel="noreferrer" style={{ marginTop: 2, display: "inline-flex", alignItems: "center", gap: 4, ...r("meta", "link"), textDecoration: linkDeco }}>
                     <Icon d={ICONS.link} size={theme.text.meta.fontSize} />
                     {displayUrl(e.url)}
                   </a>
@@ -178,7 +201,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
               <div key={g.id}>
                 {g.category && <div style={{ ...r("entrySubtitle"), marginBottom: 4 }}>{g.category}</div>}
                 <div style={r("body")}>{g.skills.join(", ")}</div>
-                {i < arr.length - 1 && <div style={{ borderTop: `1px dashed ${HAIR}`, margin: `${theme.entryGap}px 0` }} />}
+                <EntrySep last={i === arr.length - 1} />
               </div>
             ))}
           </div>
@@ -223,24 +246,22 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
       case "custom":
         return (
           <>
-            {(s as CustomSection).entries.map((e, i, arr) => (
-              <div key={e.id}>
-                {e.name && <div style={r("entryTitle")}>{e.name}</div>}
-                {(e.startDate || e.endDate || e.url) && (
-                  <div style={{ marginTop: 3, display: "flex", flexWrap: "wrap", gap: 14 }}>
-                    {(e.startDate || e.endDate) && <MetaRow icon="calendar">{dateRange(e.startDate ?? "", e.endDate ?? "", false)}</MetaRow>}
-                    {e.url && (
-                      <a href={httpsHref(e.url)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, ...r("meta", "link"), textDecoration: "none" }}>
-                        <Icon d={ICONS.link} size={theme.text.meta.fontSize} />
-                        {displayUrl(e.url)}
-                      </a>
-                    )}
-                  </div>
-                )}
-                <RichContent content={e.content} />
-                <EntrySep last={i === arr.length - 1} />
-              </div>
-            ))}
+            {(s as CustomSection).entries.map((e, i, arr) => {
+              const date = e.startDate || e.endDate ? dateRange(e.startDate ?? "", e.endDate ?? "", false) : undefined;
+              return (
+                <div key={e.id}>
+                  {(e.name || date) && <EntryHead title={e.name} date={date} />}
+                  {e.url && (
+                    <a href={httpsHref(e.url)} target="_blank" rel="noreferrer" style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 4, ...r("meta", "link"), textDecoration: linkDeco }}>
+                      <Icon d={ICONS.link} size={theme.text.meta.fontSize} />
+                      {displayUrl(e.url)}
+                    </a>
+                  )}
+                  <RichContent content={e.content} />
+                  <EntrySep last={i === arr.length - 1} />
+                </div>
+              );
+            })}
           </>
         );
       case "contact":
@@ -248,13 +269,25 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
     }
   }
 
+  const titleStyle = (): React.CSSProperties => {
+    const base: React.CSSProperties = {
+      ...r("sectionTitle"),
+      textTransform: theme.headingCase === "upper" ? "uppercase" : "none",
+      textAlign: theme.headingAlign,
+      paddingBottom: 3,
+      marginBottom: theme.titleContentGap,
+    };
+    if (theme.headingStyle === "underline") return { ...base, borderBottom: `2.5px solid ${theme.colors.rule}` };
+    if (theme.headingStyle === "accent") return { ...base, color: theme.colors.accent };
+    if (theme.headingStyle === "bar") return { ...base, borderLeft: `3px solid ${theme.colors.accent}`, paddingLeft: 9, paddingBottom: 0 };
+    return base; // plain
+  };
+
   const Column = ({ sections, col }: { sections: ResumeSection[]; col: "main" | "sidebar" }) => (
     <div style={{ display: "flex", flexDirection: "column", gap: theme.sectionGap }}>
       {sections.map((s) => (
         <section key={s.id} data-block-id={s.id} data-col={col} style={{ marginTop: breaks[s.id] ?? 0 }}>
-          <div style={{ ...r("sectionTitle"), textTransform: "uppercase", borderBottom: `2.5px solid ${theme.colors.rule}`, paddingBottom: 3, marginBottom: theme.titleContentGap }}>
-            {s.title}
-          </div>
+          <div style={titleStyle()}>{s.title}</div>
           <SectionBody s={s} />
         </section>
       ))}
@@ -262,42 +295,78 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
   );
 
   const c = contact?.data;
+  const ls = hLink(theme, linkDeco);
+  const hIcon = (d: string) => (theme.contactIcons ? <Icon d={d} color={theme.colors.accent} /> : null);
   const headerLinks: React.ReactNode[] = [];
   if (c) {
-    const ac = theme.colors.accent;
-    if (c.phone) headerLinks.push(<a key="ph" href={tel(c.phone)} style={hLink(theme)}><Icon d={ICONS.phone} color={ac} /> {c.phone}</a>);
-    if (c.email) headerLinks.push(<a key="em" href={mailto(c.email)} style={hLink(theme)}><Icon d={ICONS.mail} color={ac} /> {c.email}</a>);
-    if (c.linkedin) headerLinks.push(<a key="li" href={httpsHref(c.linkedin)} target="_blank" rel="noreferrer" style={hLink(theme)}><Icon d={ICONS.linkedin} color={ac} /> {displayUrl(c.linkedin)}</a>);
-    if (c.portfolio) headerLinks.push(<a key="pf" href={httpsHref(c.portfolio)} target="_blank" rel="noreferrer" style={hLink(theme)}><Icon d={ICONS.globe} color={ac} /> {displayUrl(c.portfolio)}</a>);
-    if (c.website) headerLinks.push(<a key="ws" href={httpsHref(c.website)} target="_blank" rel="noreferrer" style={hLink(theme)}><Icon d={ICONS.globe} color={ac} /> {displayUrl(c.website)}</a>);
-    for (const l of c.otherLinks) headerLinks.push(<a key={l.id} href={httpsHref(l.url)} target="_blank" rel="noreferrer" style={hLink(theme)}><Icon d={ICONS.link} color={ac} /> {l.label || displayUrl(l.url)}</a>);
+    if (c.phone) headerLinks.push(<a key="ph" href={tel(c.phone)} style={ls}>{hIcon(ICONS.phone)} {c.phone}</a>);
+    if (c.email) headerLinks.push(<a key="em" href={mailto(c.email)} style={ls}>{hIcon(ICONS.mail)} {c.email}</a>);
+    if (c.linkedin) headerLinks.push(<a key="li" href={httpsHref(c.linkedin)} target="_blank" rel="noreferrer" style={ls}>{hIcon(ICONS.linkedin)} {displayUrl(c.linkedin)}</a>);
+    if (c.portfolio) headerLinks.push(<a key="pf" href={httpsHref(c.portfolio)} target="_blank" rel="noreferrer" style={ls}>{hIcon(ICONS.globe)} {displayUrl(c.portfolio)}</a>);
+    if (c.website) headerLinks.push(<a key="ws" href={httpsHref(c.website)} target="_blank" rel="noreferrer" style={ls}>{hIcon(ICONS.globe)} {displayUrl(c.website)}</a>);
+    for (const l of c.otherLinks) headerLinks.push(<a key={l.id} href={httpsHref(l.url)} target="_blank" rel="noreferrer" style={ls}>{hIcon(ICONS.link)} {l.label || displayUrl(l.url)}</a>);
   }
 
+  const align = theme.headerAlign; // left | center | right
+  const flexAlign = align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start";
+  const stacked = theme.contactLayout === "stacked";
+  // One column: render every visible section in array order (the ATS-safe
+  // shape). Two: main + sidebar, order/ratio flipped by sidebarSide.
+  const sidebarLeft = theme.sidebarSide === "left";
+  const ratio = theme.sidebarRatio;
+  const mainFr = 100 - ratio;
+
+  const tinted = (node: React.ReactNode) =>
+    theme.sidebarTint ? (
+      <div style={{ background: theme.sidebarTint, borderRadius: 8, padding: "14px 14px" }}>{node}</div>
+    ) : (
+      node
+    );
+
   return (
-    <div style={{ width: "210mm", minHeight: "297mm", background: "#fff", padding: "48px 44px", fontFamily: `'${theme.fontFamily}', sans-serif` }}>
+    <div style={{ width: "210mm", minHeight: "297mm", background: "#fff", padding: `${theme.pagePadY}px ${theme.pagePadX}px`, fontFamily: fontStack(theme.fontFamily) }}>
       {c && (
-        <header style={{ marginBottom: theme.sectionGap }}>
-          <div style={{ ...r("name"), textTransform: "uppercase" }}>{c.fullName}</div>
+        <header
+          style={{
+            marginBottom: theme.sectionGap,
+            textAlign: align,
+            ...(theme.headerRule ? { borderBottom: `1.5px solid ${theme.colors.rule}`, paddingBottom: 12 } : {}),
+          }}
+        >
+          <div style={{ ...r("name"), textTransform: theme.nameCase === "upper" ? "uppercase" : "none" }}>{c.fullName}</div>
           {c.headline && <div style={{ ...r("headline"), marginTop: 2 }}>{c.headline}</div>}
-          <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>{headerLinks}</div>
+          <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", flexDirection: stacked ? "column" : "row", gap: stacked ? "3px 0" : "6px 18px", alignItems: stacked ? flexAlign : "center", justifyContent: flexAlign }}>{headerLinks}</div>
           {c.location && (
-            <div style={{ marginTop: 6 }}>
+            <div style={{ marginTop: 6, display: "flex", justifyContent: flexAlign }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5, ...r("meta"), fontWeight: 600, color: theme.colors.body }}>
-                <Icon d={ICONS.pin} /> {c.location}
+                {theme.contactIcons && <Icon d={ICONS.pin} />} {c.location}
               </span>
             </div>
           )}
         </header>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "63fr 37fr", gap: 28 }}>
-        <Column sections={main} col="main" />
-        <Column sections={sidebar} col="sidebar" />
-      </div>
+      {theme.layout === "one" ? (
+        <Column sections={visible} col="main" />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: sidebarLeft ? `${ratio}fr ${mainFr}fr` : `${mainFr}fr ${ratio}fr`, gap: theme.columnGap }}>
+          {sidebarLeft ? (
+            <>
+              {tinted(<Column sections={sidebar} col="sidebar" />)}
+              <Column sections={main} col="main" />
+            </>
+          ) : (
+            <>
+              <Column sections={main} col="main" />
+              {tinted(<Column sections={sidebar} col="sidebar" />)}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function hLink(t: ResumeTheme): React.CSSProperties {
+function hLink(t: ResumeTheme, deco: string): React.CSSProperties {
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -305,6 +374,6 @@ function hLink(t: ResumeTheme): React.CSSProperties {
     fontSize: t.text.meta.fontSize,
     fontWeight: 600,
     color: t.colors.body,
-    textDecoration: "none",
+    textDecoration: deco,
   };
 }

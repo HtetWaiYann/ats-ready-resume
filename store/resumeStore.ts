@@ -98,7 +98,9 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
         await saveResume(SEED_RESUME, DEFAULT_THEME);
         rec = await getResume();
       }
-      set({ data: migrate(rec!.data), theme: rec!.theme ?? DEFAULT_THEME, loaded: true, saveStatus: "saved" });
+      // Merge onto DEFAULT_THEME so themes saved before the layout knobs
+      // existed pick up sensible defaults instead of `undefined`.
+      set({ data: migrate(rec!.data), theme: { ...DEFAULT_THEME, ...(rec!.theme ?? {}) }, loaded: true, saveStatus: "saved" });
     },
 
     setTheme: (theme) => {

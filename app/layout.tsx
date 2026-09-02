@@ -3,17 +3,51 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css";
 import Providers from "./providers";
 
+const SITE_URL = "https://www.htetwaiyan.com";
+const DESCRIPTION = "ATS-friendly, lightweight, local-only resume editor. Build and export a clean, parseable resume — no account, no server, your data stays in your browser.";
+
 export const metadata: Metadata = {
-  title: "ATS-Ready Resume",
-  applicationName: "ATS-Ready Resume",
-  authors: [{name: "Htet Wai Yan", url:"https://www.htetwaiyan.com"}],
-  description: "ATS friendly lightweight local-only resume editor",
-  keywords:["ATS", "Resume", "ATS-Ready", "ATS Friendly", "Resume Builder", "Free Resume Builder"],
-  icons: {
-    icon: "/favicon-32x32.png",
-    apple: "/apple-touch-icon.png"
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "ATS-Ready Resume",
+    template: "%s · ATS-Ready Resume",
   },
-  manifest: "/site.webmanifest"
+  applicationName: "ATS-Ready Resume",
+  description: DESCRIPTION,
+  authors: [{ name: "Htet Wai Yan", url: SITE_URL }],
+  creator: "Htet Wai Yan",
+  publisher: "Htet Wai Yan",
+  keywords: ["ATS", "Resume", "ATS-Ready", "ATS Friendly", "Resume Builder", "Free Resume Builder"],
+  category: "productivity",
+  alternates: {
+    canonical: "/",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "ATS-Ready Resume",
+    title: "ATS-Ready Resume",
+    description: DESCRIPTION,
+    images: [{ url: "/android-chrome-512x512.png", width: 512, height: 512, alt: "ATS-Ready Resume" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "ATS-Ready Resume",
+    description: DESCRIPTION,
+    images: ["/android-chrome-512x512.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

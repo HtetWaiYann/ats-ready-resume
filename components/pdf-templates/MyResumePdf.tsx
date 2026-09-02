@@ -85,10 +85,13 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
     };
   };
   const metaSize = sc(t.text.meta.fontSize);
+  const linkDeco = t.linkUnderline ? ("underline" as const) : ("none" as const);
+  const bullet = t.bulletStyle === "dash" ? "–" : t.bulletStyle === "none" ? "" : "•";
 
-  const Sep = () => (
-    <View style={{ borderTopWidth: 1, borderTopColor: HAIR, borderStyle: "dashed", marginVertical: sc(t.entryGap) }} />
-  );
+  const Sep = () =>
+    t.entryDivider === "none" ? null : (
+      <View style={{ borderTopWidth: 1, borderTopColor: HAIR, borderStyle: t.entryDivider, marginVertical: sc(t.entryGap) }} />
+    );
 
   const MetaItem = ({ icon, children }: { icon: keyof typeof ICONS; children: string }) => (
     <View style={{ flexDirection: "row", alignItems: "center", marginRight: sc(14) }}>
@@ -97,12 +100,36 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
     </View>
   );
 
+  // Title + subtitle + dates/location, honoring entryDateAlign.
+  const EntryHead = ({ title, subtitle, date, location }: { title: string; subtitle?: string; date?: string; location?: string }) => {
+    const right = t.entryDateAlign === "right";
+    return (
+      <>
+        {right ? (
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <Text style={{ ...rt("entryTitle"), flex: 1 }}>{title}</Text>
+            {date ? <Text style={{ ...rt("meta"), marginLeft: sc(8) }}>{date}</Text> : null}
+          </View>
+        ) : (
+          <Text style={rt("entryTitle")}>{title}</Text>
+        )}
+        {subtitle ? <Text style={rt("entrySubtitle")}>{subtitle}</Text> : null}
+        {(right ? location : date || location) ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: sc(3) }}>
+            {!right && date ? <MetaItem icon="calendar">{date}</MetaItem> : null}
+            {location ? <MetaItem icon="pin">{location}</MetaItem> : null}
+          </View>
+        ) : null}
+      </>
+    );
+  };
+
   const Runs = ({ runs }: { runs: Run[] }) => (
     <>
       {runs.map((run, i) => {
         const style = { fontWeight: run.bold ? (700 as const) : undefined, fontStyle: run.italic ? ("italic" as const) : undefined };
         return run.href ? (
-          <Link key={i} src={httpsHref(run.href)} style={{ ...style, color: t.colors.link, textDecoration: "none" }}>{run.text}</Link>
+          <Link key={i} src={httpsHref(run.href)} style={{ ...style, color: t.colors.link, textDecoration: linkDeco }}>{run.text}</Link>
         ) : (
           <Text key={i} style={style}>{run.text}</Text>
         );
@@ -118,7 +145,7 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
         ) : (
           b.items.map((item, j) => (
             <View key={`${i}-${j}`} style={{ flexDirection: "row", marginTop: sc(2) }}>
-              <Text style={{ ...rt("body"), width: sc(12) }}>•</Text>
+              {bullet ? <Text style={{ ...rt("body"), width: sc(12) }}>{bullet}</Text> : null}
               <Text style={{ ...rt("body"), flex: 1 }}><Runs runs={item} /></Text>
             </View>
           ))
@@ -136,12 +163,7 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
           <>
             {(s as ExperienceSection).entries.map((e, i, arr) => (
               <View key={e.id}>
-                <Text style={rt("entryTitle")}>{e.role}</Text>
-                <Text style={rt("entrySubtitle")}>{e.company}</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: sc(3) }}>
-                  <MetaItem icon="calendar">{dateRange(e.startDate, e.endDate, e.isCurrent)}</MetaItem>
-                  {e.location ? <MetaItem icon="pin">{e.location}</MetaItem> : null}
-                </View>
+                <EntryHead title={e.role} subtitle={e.company} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
                 <PdfRich content={e.content} />
                 {i < arr.length - 1 ? <Sep /> : null}
               </View>
@@ -153,12 +175,7 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
           <>
             {(s as EducationSection).entries.map((e, i, arr) => (
               <View key={e.id}>
-                <Text style={rt("entryTitle")}>{e.degree}</Text>
-                <Text style={rt("entrySubtitle")}>{e.school}</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: sc(3) }}>
-                  <MetaItem icon="calendar">{dateRange(e.startDate, e.endDate, e.isCurrent)}</MetaItem>
-                  {e.location ? <MetaItem icon="pin">{e.location}</MetaItem> : null}
-                </View>
+                <EntryHead title={e.degree} subtitle={e.school} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
                 <PdfRich content={e.content} />
                 {i < arr.length - 1 ? <Sep /> : null}
               </View>
@@ -174,7 +191,7 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
                 {e.url ? (
                   <View style={{ flexDirection: "row", alignItems: "center", marginTop: sc(2) }}>
                     <PdfIcon name="link" size={metaSize} color={t.colors.link} />
-                    <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: "none" }}>{displayUrl(e.url)}</Link>
+                    <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: linkDeco }}>{displayUrl(e.url)}</Link>
                   </View>
                 ) : null}
                 <PdfRich content={e.content} />
@@ -229,24 +246,22 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
       case "custom":
         return (
           <>
-            {(s as CustomSection).entries.map((e, i, arr) => (
-              <View key={e.id}>
-                {e.name ? <Text style={rt("entryTitle")}>{e.name}</Text> : null}
-                {e.startDate || e.endDate || e.url ? (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginTop: sc(3) }}>
-                    {e.startDate || e.endDate ? <MetaItem icon="calendar">{dateRange(e.startDate ?? "", e.endDate ?? "", false)}</MetaItem> : null}
-                    {e.url ? (
-                      <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <PdfIcon name="link" size={metaSize} color={t.colors.link} />
-                        <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: "none" }}>{displayUrl(e.url)}</Link>
-                      </View>
-                    ) : null}
-                  </View>
-                ) : null}
-                <PdfRich content={e.content} />
-                {i < arr.length - 1 ? <Sep /> : null}
-              </View>
-            ))}
+            {(s as CustomSection).entries.map((e, i, arr) => {
+              const date = e.startDate || e.endDate ? dateRange(e.startDate ?? "", e.endDate ?? "", false) : undefined;
+              return (
+                <View key={e.id}>
+                  {e.name || date ? <EntryHead title={e.name} date={date} /> : null}
+                  {e.url ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: sc(3) }}>
+                      <PdfIcon name="link" size={metaSize} color={t.colors.link} />
+                      <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: linkDeco }}>{displayUrl(e.url)}</Link>
+                    </View>
+                  ) : null}
+                  <PdfRich content={e.content} />
+                  {i < arr.length - 1 ? <Sep /> : null}
+                </View>
+              );
+            })}
           </>
         );
       case "contact":
@@ -254,16 +269,33 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
     }
   }
 
-  const Column = ({ sections, width }: { sections: ResumeSection[]; width: string }) => (
-    <View style={{ width }}>
+  const titleStyle = () => {
+    const base = {
+      ...rt("sectionTitle"),
+      textTransform: (t.headingCase === "upper" ? "uppercase" : "none") as "uppercase" | "none",
+      textAlign: t.headingAlign,
+      paddingBottom: sc(3),
+      marginBottom: sc(t.titleContentGap),
+    };
+    if (t.headingStyle === "underline") return { ...base, borderBottomWidth: 2.5 * SCALE, borderBottomColor: t.colors.rule };
+    if (t.headingStyle === "accent") return { ...base, color: t.colors.accent };
+    if (t.headingStyle === "bar") return { ...base, borderLeftWidth: 3 * SCALE, borderLeftColor: t.colors.accent, paddingLeft: sc(9), paddingBottom: 0 };
+    return base; // plain
+  };
+
+  const Column = ({ sections }: { sections: ResumeSection[] }) => (
+    <>
       {sections.map((s) => (
         <View key={s.id} style={{ marginBottom: sc(t.sectionGap) }} wrap={false}>
-          <Text style={{ ...rt("sectionTitle"), textTransform: "uppercase", borderBottomWidth: 2.5 * SCALE, borderBottomColor: t.colors.rule, paddingBottom: sc(3), marginBottom: sc(t.titleContentGap) }}>{s.title}</Text>
+          <Text style={titleStyle()}>{s.title}</Text>
           <Body s={s} />
         </View>
       ))}
-    </View>
+    </>
   );
+
+  const Tinted = ({ children }: { children: React.ReactNode }) =>
+    t.sidebarTint ? <View style={{ backgroundColor: t.sidebarTint, borderRadius: sc(8), padding: sc(12) }}>{children}</View> : <>{children}</>;
 
   const contact = data.sections.find((s) => s.type === "contact") as ContactSection | undefined;
   const c = contact?.data;
@@ -271,21 +303,38 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
   const main = visible.filter((s) => s.column === "main");
   const sidebar = visible.filter((s) => s.column === "sidebar");
 
+  const flexAlign = t.headerAlign === "center" ? "center" : t.headerAlign === "right" ? "flex-end" : "flex-start";
+  const stacked = t.contactLayout === "stacked";
+
   const HeaderLink = ({ icon, href, label }: { icon: keyof typeof ICONS; href: string; label: string }) => (
-    <View style={{ flexDirection: "row", alignItems: "center", marginRight: sc(18), marginBottom: sc(6) }}>
-      <PdfIcon name={icon} size={metaSize} color={t.colors.accent} />
-      <Link src={href} style={{ fontFamily: t.fontFamily, fontSize: metaSize, fontWeight: 600, color: t.colors.body, textDecoration: "none", marginLeft: sc(5) }}>{label}</Link>
+    <View style={{ flexDirection: "row", alignItems: "center", marginRight: stacked ? 0 : sc(18), marginBottom: sc(stacked ? 3 : 6) }}>
+      {t.contactIcons ? <PdfIcon name={icon} size={metaSize} color={t.colors.accent} /> : null}
+      <Link src={href} style={{ fontFamily: t.fontFamily, fontSize: metaSize, fontWeight: 600, color: t.colors.body, textDecoration: linkDeco, marginLeft: t.contactIcons ? sc(5) : 0 }}>{label}</Link>
     </View>
   );
 
+  const sidebarLeft = t.sidebarSide === "left";
+  // Column widths as % of the content box; convert the px column gap so the
+  // PDF proportions track the web preview.
+  const contentW = 794 - 2 * t.pagePadX;
+  const gapPct = (t.columnGap / contentW) * 100;
+  const sidePct = `${t.sidebarRatio}%`;
+  const mainPct = `${100 - t.sidebarRatio - gapPct}%`;
+
   return (
     <Document>
-      <Page size="A4" style={{ paddingVertical: sc(48), paddingHorizontal: sc(44), fontFamily: t.fontFamily }}>
+      <Page size="A4" style={{ paddingVertical: sc(t.pagePadY), paddingHorizontal: sc(t.pagePadX), fontFamily: t.fontFamily }}>
         {c ? (
-          <View style={{ marginBottom: sc(t.sectionGap) }}>
-            <Text style={{ ...rt("name"), textTransform: "uppercase" }}>{c.fullName}</Text>
-            {c.headline ? <Text style={{ ...rt("headline"), marginTop: sc(2) }}>{c.headline}</Text> : null}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: sc(10) }}>
+          <View
+            style={{
+              marginBottom: sc(t.sectionGap),
+              alignItems: flexAlign,
+              ...(t.headerRule ? { borderBottomWidth: 1.5 * SCALE, borderBottomColor: t.colors.rule, paddingBottom: sc(12) } : {}),
+            }}
+          >
+            <Text style={{ ...rt("name"), textTransform: t.nameCase === "upper" ? "uppercase" : "none", textAlign: t.headerAlign }}>{c.fullName}</Text>
+            {c.headline ? <Text style={{ ...rt("headline"), marginTop: sc(2), textAlign: t.headerAlign }}>{c.headline}</Text> : null}
+            <View style={{ flexDirection: stacked ? "column" : "row", flexWrap: "wrap", marginTop: sc(10), alignItems: flexAlign, justifyContent: flexAlign }}>
               {c.phone ? <HeaderLink icon="phone" href={tel(c.phone)} label={c.phone} /> : null}
               {c.email ? <HeaderLink icon="mail" href={mailto(c.email)} label={c.email} /> : null}
               {c.linkedin ? <HeaderLink icon="linkedin" href={httpsHref(c.linkedin)} label={displayUrl(c.linkedin)} /> : null}
@@ -295,16 +344,29 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
             </View>
             {c.location ? (
               <View style={{ flexDirection: "row", alignItems: "center", marginTop: sc(1) }}>
-                <PdfIcon name="pin" size={metaSize} color={t.colors.body} />
-                <Text style={{ fontFamily: t.fontFamily, fontSize: metaSize, fontWeight: 600, color: t.colors.body, marginLeft: sc(5) }}>{c.location}</Text>
+                {t.contactIcons ? <PdfIcon name="pin" size={metaSize} color={t.colors.body} /> : null}
+                <Text style={{ fontFamily: t.fontFamily, fontSize: metaSize, fontWeight: 600, color: t.colors.body, marginLeft: t.contactIcons ? sc(5) : 0 }}>{c.location}</Text>
               </View>
             ) : null}
           </View>
         ) : null}
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Column sections={main} width="62%" />
-          <Column sections={sidebar} width="34%" />
-        </View>
+        {t.layout === "one" ? (
+          <Column sections={visible} />
+        ) : (
+          <View style={{ flexDirection: "row" }}>
+            {sidebarLeft ? (
+              <>
+                <View style={{ width: sidePct }}><Tinted><Column sections={sidebar} /></Tinted></View>
+                <View style={{ width: mainPct, marginLeft: sc(t.columnGap) }}><Column sections={main} /></View>
+              </>
+            ) : (
+              <>
+                <View style={{ width: mainPct }}><Column sections={main} /></View>
+                <View style={{ width: sidePct, marginLeft: sc(t.columnGap) }}><Tinted><Column sections={sidebar} /></Tinted></View>
+              </>
+            )}
+          </View>
+        )}
       </Page>
     </Document>
   );

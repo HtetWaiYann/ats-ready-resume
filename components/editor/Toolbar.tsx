@@ -70,7 +70,7 @@ export default function Toolbar({ onOpenDesign }: { onOpenDesign: () => void }) 
         <span style={{ display: "grid", placeItems: "center", width: 32, height: 32, borderRadius: 9, background: "#17181c", color: "#fff", flexShrink: 0 }}>
           <TrademarkCircleFilled style={{ fontSize: 15 }} />
         </span>
-        <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: -0.3, color: "#17181c" }}>My Resume</span>
+        <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: -0.3, color: "#17181c" }}>ATS-Ready Resume</span>
         {statusText && (
           <span className="mono" style={{ fontSize: 11, fontWeight: 500, color: statusColor, display: "inline-flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor }} />

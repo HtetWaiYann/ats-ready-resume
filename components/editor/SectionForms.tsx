@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Input, Button, Select, Checkbox } from "antd";
-import { DeleteOutlined, PlusOutlined, HolderOutlined } from "@ant-design/icons";
+import { Input, Button, Select, Checkbox, Popover } from "antd";
+import { DeleteOutlined, PlusOutlined, HolderOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type {
   ResumeSection,
   SummarySection,
@@ -56,11 +56,27 @@ function EntryShell({ handle, onRemove, children }: { handle: React.ReactNode; o
 
 const MD_PLACEHOLDER = "Freeform text — blank line for a new paragraph.\n- start a line with a dash for a bullet\n**bold**, *italic*, [text](url)";
 
+const FORMATTING_HELP = (
+  <div style={{ fontSize: 13, lineHeight: 1.9 }}>
+    <div><code>**bold**</code> → <strong>bold</strong></div>
+    <div><code>*italic*</code> → <em>italic</em></div>
+    <div><code>[text](url)</code> → link</div>
+    <div><code>- item</code> at line start → bullet</div>
+    <div>Blank line → new paragraph</div>
+  </div>
+);
+
 function MdField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <Field label={label}>
+    <label style={{ display: "block" }}>
+      <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, fontWeight: 500, color: "#6b7280", marginBottom: 2 }}>
+        {label}
+        <Popover placement="leftTop" title="Formatting" content={FORMATTING_HELP}>
+          <InfoCircleOutlined style={{ color: "#a6a7af", fontSize: 13, cursor: "help" }} />
+        </Popover>
+      </span>
       <Input.TextArea rows={5} value={value} placeholder={MD_PLACEHOLDER} onChange={(e) => onChange(e.target.value)} />
-    </Field>
+    </label>
   );
 }
 

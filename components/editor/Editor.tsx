@@ -9,7 +9,7 @@ import {
   useDroppable,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { HolderOutlined } from "@ant-design/icons";
 import { Spin } from "antd";
@@ -58,8 +58,24 @@ function Column({ id, label, sections }: { id: "main" | "sidebar"; label: string
   );
 }
 
+// Single-column layout: one flat, reorderable list — no Main/Sidebar split.
+function SingleList({ sections }: { sections: ResumeSection[] }) {
+  return (
+    <div style={{ marginTop: 22 }}>
+      <div className="eyebrow" style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+        Sections
+        <span style={{ flex: 1, height: 1, background: "#e6e6ea" }} />
+        <span style={{ color: "#c3c4cb" }}>{sections.length}</span>
+      </div>
+      <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+        {sections.map((s) => <SortableSectionPanel key={s.id} section={s} />)}
+      </SortableContext>
+    </div>
+  );
+}
+
 export default function Editor() {
-  const { data, theme, loaded, load, moveSection } = useResumeStore();
+  const { data, theme, loaded, load, moveSection, replaceAll } = useResumeStore();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const [designOpen, setDesignOpen] = useState(false);
 
@@ -80,6 +96,20 @@ export default function Editor() {
     const activeId = String(active.id);
     const overId = String(over.id);
     if (activeId === overId) return;
+
+    // Single-column: pure array reorder over all non-contact sections; each
+    // section keeps its `column` (ignored in this layout, restored if the user
+    // switches back to two-column).
+    if (theme.layout === "one") {
+      const from = nonContact.findIndex((s) => s.id === activeId);
+      const to = nonContact.findIndex((s) => s.id === overId);
+      if (from === -1 || to === -1) return;
+      const reordered = arrayMove(nonContact, from, to);
+      let i = 0;
+      const merged = data!.sections.map((s) => (s.type === "contact" ? s : reordered[i++]));
+      replaceAll({ sections: merged });
+      return;
+    }
 
     const toColumn: "main" | "sidebar" =
       overId === "col-sidebar" ? "sidebar" : overId === "col-main" ? "main" : nonContact.find((s) => s.id === overId)?.column ?? "main";
@@ -109,8 +139,14 @@ export default function Editor() {
             {contact && <ContactForm section={contact} />}
 
             <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-              <Column id="main" label="Main column" sections={main} />
-              <Column id="sidebar" label="Sidebar" sections={sidebar} />
+              {theme.layout === "one" ? (
+                <SingleList sections={nonContact} />
+              ) : (
+                <>
+                  <Column id="main" label="Main column" sections={main} />
+                  <Column id="sidebar" label="Sidebar" sections={sidebar} />
+                </>
+              )}
             </DndContext>
           </div>
         </aside>
