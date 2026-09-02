@@ -43,3 +43,5 @@ next-env.d.ts
 
 CLAUDE.local.md
 .claude
+# Playwright MCP debug artifacts
+.playwright-mcp/

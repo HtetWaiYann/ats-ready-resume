@@ -10,7 +10,6 @@ import type { ResumeTheme } from "@/types/theme";
 // onto the next sheet so nothing is cut mid-line.
 const A4_W = 794;
 const A4_H = 1123;
-const PAGE_PAD = 40; // top margin a pushed section keeps on its new page
 const FIT_INSET = 28; // breathing room so the sheet never touches the pane edge
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 1.6;
@@ -31,20 +30,38 @@ export default function PaperPreview({
   const [fitScale, setFitScale] = useState(0.82);
 
   // Section-aware pagination (independent of zoom — measured at natural size).
+  // A section short enough to fit a page is one block (moves as a unit); a
+  // section with 2+ entries becomes [title+first entry] then one block per
+  // remaining entry, so an over-long section breaks between entries instead of
+  // stranding a half-empty page.
+  const pad = theme.pagePadY;
   useEffect(() => {
     const el = measureRef.current;
     if (!el) return;
     const compute = () => {
-      const top = el.getBoundingClientRect().top;
+      const top0 = el.getBoundingClientRect().top;
       const cols: Record<string, Block[]> = { main: [], sidebar: [] };
-      el.querySelectorAll<HTMLElement>("[data-block-id]").forEach((b) => {
-        const rect = b.getBoundingClientRect();
-        (cols[b.dataset.col ?? "main"] ??= []).push({ id: b.dataset.blockId!, top: rect.top - top, height: rect.height });
+      el.querySelectorAll<HTMLElement>("[data-sec]").forEach((sec) => {
+        const col = sec.dataset.col ?? "main";
+        const list = (cols[col] ??= []);
+        const secRect = sec.getBoundingClientRect();
+        const entries = sec.querySelectorAll<HTMLElement>("[data-entry]");
+        if (entries.length >= 2) {
+          const e0 = entries[0].getBoundingClientRect();
+          // title + first entry, pushed via the section element
+          list.push({ id: sec.dataset.blockId!, top: secRect.top - top0, height: e0.bottom - secRect.top });
+          for (let k = 1; k < entries.length; k++) {
+            const r = entries[k].getBoundingClientRect();
+            list.push({ id: entries[k].dataset.blockId!, top: r.top - top0, height: r.height });
+          }
+        } else {
+          list.push({ id: sec.dataset.blockId!, top: secRect.top - top0, height: secRect.height });
+        }
       });
       const merged: Record<string, number> = {};
       let bottom = 0;
       for (const list of Object.values(cols)) {
-        const { breaks: b, maxBottom } = paginate(list, A4_H, PAGE_PAD);
+        const { breaks: b, maxBottom } = paginate(list, A4_H, pad);
         Object.assign(merged, b);
         bottom = Math.max(bottom, maxBottom);
       }
@@ -55,7 +72,7 @@ export default function PaperPreview({
     const ro = new ResizeObserver(compute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [data, theme]);
+  }, [data, theme, pad]);
 
   // Fit-to-width: track the available pane width and derive a scale that keeps
   // the whole A4 sheet visible (never upscaled past 100% automatically).

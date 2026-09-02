@@ -143,7 +143,16 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
     );
   };
 
-  function SectionBody({ s }: { s: ResumeSection }) {
+  // Per-entry break marker: lets PaperPreview push a single entry to the next
+  // page (carrying the entries after it) when a section is too long to fit.
+  const entryProps = (id: string, col: "main" | "sidebar") => ({
+    "data-entry": "1",
+    "data-block-id": id,
+    "data-col": col,
+    style: { marginTop: breaks[id] ?? 0 } as React.CSSProperties,
+  });
+
+  function SectionBody({ s, col }: { s: ResumeSection; col: "main" | "sidebar" }) {
     switch (s.type) {
       case "summary":
         return <p style={r("body")}>{(s as SummarySection).data.content}</p>;
@@ -152,7 +161,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
         return (
           <>
             {(s as ExperienceSection).entries.map((e, i, arr) => (
-              <div key={e.id}>
+              <div key={e.id} {...entryProps(e.id, col)}>
                 <EntryHead title={e.role} subtitle={e.company} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
                 <RichContent content={e.content} />
                 <EntrySep last={i === arr.length - 1} />
@@ -165,7 +174,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
         return (
           <>
             {(s as EducationSection).entries.map((e, i, arr) => (
-              <div key={e.id}>
+              <div key={e.id} {...entryProps(e.id, col)}>
                 <EntryHead title={e.degree} subtitle={e.school} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
                 <RichContent content={e.content} />
                 <EntrySep last={i === arr.length - 1} />
@@ -178,7 +187,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
         return (
           <>
             {(s as ProjectsSection).entries.map((e, i, arr) => (
-              <div key={e.id}>
+              <div key={e.id} {...entryProps(e.id, col)}>
                 <div style={r("entryTitle")}>{e.name}</div>
                 {e.url && (
                   <a href={httpsHref(e.url)} target="_blank" rel="noreferrer" style={{ marginTop: 2, display: "inline-flex", alignItems: "center", gap: 4, ...r("meta", "link"), textDecoration: linkDeco }}>
@@ -198,7 +207,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
         return (
           <div>
             {sk.groups.map((g, i, arr) => (
-              <div key={g.id}>
+              <div key={g.id} {...entryProps(g.id, col)}>
                 {g.category && <div style={{ ...r("entrySubtitle"), marginBottom: 4 }}>{g.category}</div>}
                 <div style={r("body")}>{g.skills.join(", ")}</div>
                 <EntrySep last={i === arr.length - 1} />
@@ -212,7 +221,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
         return (
           <>
             {(s as CertificationsSection).entries.map((e, i, arr) => (
-              <div key={e.id}>
+              <div key={e.id} {...entryProps(e.id, col)}>
                 <div style={r("entryTitle")}>{e.name}</div>
                 <div style={{ ...r("meta"), marginTop: 2 }}>{e.issuer}{e.issueDate ? ` · ${e.issueDate}` : ""}</div>
                 {i < arr.length - 1 && <div style={{ height: theme.entryGap }} />}
@@ -225,7 +234,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
         return (
           <>
             {(s as LanguagesSection).entries.map((e, i, arr) => (
-              <div key={e.id}>
+              <div key={e.id} {...entryProps(e.id, col)}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={r("entryTitle")}>{e.language}</div>
@@ -249,7 +258,7 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
             {(s as CustomSection).entries.map((e, i, arr) => {
               const date = e.startDate || e.endDate ? dateRange(e.startDate ?? "", e.endDate ?? "", false) : undefined;
               return (
-                <div key={e.id}>
+                <div key={e.id} {...entryProps(e.id, col)}>
                   {(e.name || date) && <EntryHead title={e.name} date={date} />}
                   {e.url && (
                     <a href={httpsHref(e.url)} target="_blank" rel="noreferrer" style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 4, ...r("meta", "link"), textDecoration: linkDeco }}>
@@ -286,9 +295,9 @@ export default function MyResume({ data, theme, breaks = {} }: { data: ResumeDat
   const Column = ({ sections, col }: { sections: ResumeSection[]; col: "main" | "sidebar" }) => (
     <div style={{ display: "flex", flexDirection: "column", gap: theme.sectionGap }}>
       {sections.map((s) => (
-        <section key={s.id} data-block-id={s.id} data-col={col} style={{ marginTop: breaks[s.id] ?? 0 }}>
+        <section key={s.id} data-sec="1" data-block-id={s.id} data-col={col} style={{ marginTop: breaks[s.id] ?? 0 }}>
           <div style={titleStyle()}>{s.title}</div>
-          <SectionBody s={s} />
+          <SectionBody s={s} col={col} />
         </section>
       ))}
     </div>

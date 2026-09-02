@@ -137,135 +137,118 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
     </>
   );
 
-  const PdfRich = ({ content }: { content: string }) => (
-    <>
-      {parseRich(content).map((b, i) =>
-        b.type === "p" ? (
-          <Text key={i} style={{ ...rt("body"), marginTop: sc(i ? 4 : 3) }}><Runs runs={b.runs} /></Text>
-        ) : (
-          b.items.map((item, j) => (
-            <View key={`${i}-${j}`} style={{ flexDirection: "row", marginTop: sc(2) }}>
-              {bullet ? <Text style={{ ...rt("body"), width: sc(12) }}>{bullet}</Text> : null}
-              <Text style={{ ...rt("body"), flex: 1 }}><Runs runs={item} /></Text>
-            </View>
-          ))
-        ),
-      )}
-    </>
-  );
+  // The wrapper carries the whole leading gap (7) below the preceding meta/link
+  // row, so the FIRST block — paragraph, bullets, or anything parseRich grows
+  // later — gets it uniformly. Blocks themselves only add inter-block spacing
+  // (first block = 0). react-pdf packs text tighter to the top than the browser,
+  // so 7 here reads like the web preview's smaller number.
+  const PdfRich = ({ content }: { content: string }) => {
+    const blocks = parseRich(content);
+    if (!blocks.length) return null;
+    return (
+      <View style={{ marginTop: sc(7) }}>
+        {blocks.map((b, i) =>
+          b.type === "p" ? (
+            <Text key={i} style={{ ...rt("body"), marginTop: sc(i ? 4 : 0) }}><Runs runs={b.runs} /></Text>
+          ) : (
+            b.items.map((item, j) => (
+              <View key={`${i}-${j}`} style={{ flexDirection: "row", marginTop: sc(i === 0 && j === 0 ? 0 : j === 0 ? 4 : 2) }}>
+                {bullet ? <Text style={{ ...rt("body"), width: sc(12) }}>{bullet}</Text> : null}
+                <Text style={{ ...rt("body"), flex: 1 }}><Runs runs={item} /></Text>
+              </View>
+            ))
+          ),
+        )}
+      </View>
+    );
+  };
 
-  function Body({ s }: { s: ResumeSection }) {
+  // One node per entry (each includes its own trailing separator). The caller
+  // glues the section title to entry[0] and makes each remaining entry an
+  // atomic (wrap={false}) block, mirroring PaperPreview's break model so the
+  // export paginates the same way as the on-screen preview.
+  function bodyItems(s: ResumeSection): React.ReactNode[] {
     switch (s.type) {
       case "summary":
-        return <Text style={rt("body")}>{(s as SummarySection).data.content}</Text>;
+        return [<Text key="c" style={rt("body")}>{(s as SummarySection).data.content}</Text>];
       case "experience":
-        return (
-          <>
-            {(s as ExperienceSection).entries.map((e, i, arr) => (
-              <View key={e.id}>
-                <EntryHead title={e.role} subtitle={e.company} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
-                <PdfRich content={e.content} />
-                {i < arr.length - 1 ? <Sep /> : null}
-              </View>
-            ))}
-          </>
-        );
+        return (s as ExperienceSection).entries.map((e, i, arr) => (
+          <View key={e.id}>
+            <EntryHead title={e.role} subtitle={e.company} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
+            <PdfRich content={e.content} />
+            {i < arr.length - 1 ? <Sep /> : null}
+          </View>
+        ));
       case "education":
-        return (
-          <>
-            {(s as EducationSection).entries.map((e, i, arr) => (
-              <View key={e.id}>
-                <EntryHead title={e.degree} subtitle={e.school} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
-                <PdfRich content={e.content} />
-                {i < arr.length - 1 ? <Sep /> : null}
-              </View>
-            ))}
-          </>
-        );
+        return (s as EducationSection).entries.map((e, i, arr) => (
+          <View key={e.id}>
+            <EntryHead title={e.degree} subtitle={e.school} date={dateRange(e.startDate, e.endDate, e.isCurrent)} location={e.location} />
+            <PdfRich content={e.content} />
+            {i < arr.length - 1 ? <Sep /> : null}
+          </View>
+        ));
       case "projects":
-        return (
-          <>
-            {(s as ProjectsSection).entries.map((e, i, arr) => (
-              <View key={e.id}>
-                <Text style={rt("entryTitle")}>{e.name}</Text>
-                {e.url ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: sc(2) }}>
-                    <PdfIcon name="link" size={metaSize} color={t.colors.link} />
-                    <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: linkDeco }}>{displayUrl(e.url)}</Link>
-                  </View>
-                ) : null}
-                <PdfRich content={e.content} />
-                {i < arr.length - 1 ? <Sep /> : null}
+        return (s as ProjectsSection).entries.map((e, i, arr) => (
+          <View key={e.id}>
+            <Text style={rt("entryTitle")}>{e.name}</Text>
+            {e.url ? (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: sc(2) }}>
+                <PdfIcon name="link" size={metaSize} color={t.colors.link} />
+                <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: linkDeco }}>{displayUrl(e.url)}</Link>
               </View>
-            ))}
-          </>
-        );
-      case "skills": {
-        const sk = s as SkillsSection;
-        return (
-          <>
-            {sk.groups.map((g, i, arr) => (
-              <View key={g.id}>
-                {g.category ? <Text style={{ ...rt("entrySubtitle"), marginBottom: sc(4) }}>{g.category}</Text> : null}
-                <Text style={rt("body")}>{g.skills.join(", ")}</Text>
-                {i < arr.length - 1 ? <Sep /> : null}
-              </View>
-            ))}
-          </>
-        );
-      }
+            ) : null}
+            <PdfRich content={e.content} />
+            {i < arr.length - 1 ? <Sep /> : null}
+          </View>
+        ));
+      case "skills":
+        return (s as SkillsSection).groups.map((g, i, arr) => (
+          <View key={g.id}>
+            {g.category ? <Text style={{ ...rt("entrySubtitle"), marginBottom: sc(4) }}>{g.category}</Text> : null}
+            <Text style={rt("body")}>{g.skills.join(", ")}</Text>
+            {i < arr.length - 1 ? <Sep /> : null}
+          </View>
+        ));
       case "certifications":
-        return (
-          <>
-            {(s as CertificationsSection).entries.map((e, i, arr) => (
-              <View key={e.id} style={{ marginBottom: i < arr.length - 1 ? sc(t.entryGap) : 0 }}>
-                <Text style={rt("entryTitle")}>{e.name}</Text>
-                <Text style={{ ...rt("meta"), marginTop: sc(2) }}>{e.issuer}{e.issueDate ? ` · ${e.issueDate}` : ""}</Text>
-              </View>
-            ))}
-          </>
-        );
+        return (s as CertificationsSection).entries.map((e, i, arr) => (
+          <View key={e.id} style={{ marginBottom: i < arr.length - 1 ? sc(t.entryGap) : 0 }}>
+            <Text style={rt("entryTitle")}>{e.name}</Text>
+            <Text style={{ ...rt("meta"), marginTop: sc(2) }}>{e.issuer}{e.issueDate ? ` · ${e.issueDate}` : ""}</Text>
+          </View>
+        ));
       case "languages":
-        return (
-          <>
-            {(s as LanguagesSection).entries.map((e, i, arr) => (
-              <View key={e.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: i < arr.length - 1 ? sc(t.entryGap) : 0 }}>
-                <View>
-                  <Text style={rt("entryTitle")}>{e.language}</Text>
-                  <Text style={{ ...rt("meta"), marginTop: sc(1) }}>{e.proficiency}</Text>
-                </View>
-                <View style={{ flexDirection: "row" }}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <View key={n} style={{ width: sc(9), height: sc(9), borderRadius: sc(5), marginLeft: sc(4), backgroundColor: n <= (LANG_DOTS[e.proficiency] ?? 3) ? t.colors.accent : HAIR }} />
-                  ))}
-                </View>
-              </View>
-            ))}
-          </>
-        );
+        return (s as LanguagesSection).entries.map((e, i, arr) => (
+          <View key={e.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: i < arr.length - 1 ? sc(t.entryGap) : 0 }}>
+            <View>
+              <Text style={rt("entryTitle")}>{e.language}</Text>
+              <Text style={{ ...rt("meta"), marginTop: sc(1) }}>{e.proficiency}</Text>
+            </View>
+            <View style={{ flexDirection: "row" }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <View key={n} style={{ width: sc(9), height: sc(9), borderRadius: sc(5), marginLeft: sc(4), backgroundColor: n <= (LANG_DOTS[e.proficiency] ?? 3) ? t.colors.accent : HAIR }} />
+              ))}
+            </View>
+          </View>
+        ));
       case "custom":
-        return (
-          <>
-            {(s as CustomSection).entries.map((e, i, arr) => {
-              const date = e.startDate || e.endDate ? dateRange(e.startDate ?? "", e.endDate ?? "", false) : undefined;
-              return (
-                <View key={e.id}>
-                  {e.name || date ? <EntryHead title={e.name} date={date} /> : null}
-                  {e.url ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: sc(3) }}>
-                      <PdfIcon name="link" size={metaSize} color={t.colors.link} />
-                      <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: linkDeco }}>{displayUrl(e.url)}</Link>
-                    </View>
-                  ) : null}
-                  <PdfRich content={e.content} />
-                  {i < arr.length - 1 ? <Sep /> : null}
+        return (s as CustomSection).entries.map((e, i, arr) => {
+          const date = e.startDate || e.endDate ? dateRange(e.startDate ?? "", e.endDate ?? "", false) : undefined;
+          return (
+            <View key={e.id}>
+              {e.name || date ? <EntryHead title={e.name} date={date} /> : null}
+              {e.url ? (
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: sc(3) }}>
+                  <PdfIcon name="link" size={metaSize} color={t.colors.link} />
+                  <Link src={httpsHref(e.url)} style={{ ...rt("meta", "link"), marginLeft: sc(4), textDecoration: linkDeco }}>{displayUrl(e.url)}</Link>
                 </View>
-              );
-            })}
-          </>
-        );
+              ) : null}
+              <PdfRich content={e.content} />
+              {i < arr.length - 1 ? <Sep /> : null}
+            </View>
+          );
+        });
       case "contact":
-        return null;
+        return [];
     }
   }
 
@@ -283,13 +266,29 @@ export default function MyResumePdf({ data, theme }: { data: ResumeData; theme: 
     return base; // plain
   };
 
+  // Section title is glued to its first entry (both in one wrap={false} block
+  // so the title is never orphaned); every remaining entry is its own atomic
+  // block, so a long section breaks between entries instead of jumping whole.
+  const Section = ({ s }: { s: ResumeSection }) => {
+    const items = bodyItems(s);
+    const title = <Text style={titleStyle()}>{s.title}</Text>;
+    return (
+      <View style={{ marginBottom: sc(t.sectionGap) }}>
+        <View wrap={false}>
+          {title}
+          {items[0] ?? null}
+        </View>
+        {items.slice(1).map((it, i) => (
+          <View key={i} wrap={false}>{it}</View>
+        ))}
+      </View>
+    );
+  };
+
   const Column = ({ sections }: { sections: ResumeSection[] }) => (
     <>
       {sections.map((s) => (
-        <View key={s.id} style={{ marginBottom: sc(t.sectionGap) }} wrap={false}>
-          <Text style={titleStyle()}>{s.title}</Text>
-          <Body s={s} />
-        </View>
+        <Section key={s.id} s={s} />
       ))}
     </>
   );
